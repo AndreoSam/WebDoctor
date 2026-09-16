@@ -1,0 +1,5 @@
+const states=globalThis.__webdoctorMonitoring||(globalThis.__webdoctorMonitoring=new Map());
+const intervals={hourly:3600000,daily:86400000,weekly:604800000};
+export function getHostedMonitor(origin){return states.get(origin)||null}
+export function setHostedMonitor(origin,p={}){const prev=states.get(origin)||{},cadence=['hourly','daily','weekly'].includes(p.cadence)?p.cadence:'daily',now=new Date().toISOString();const m={origin,enabled:p.enabled!==false,cadence,alertOnNewIssues:p.alertOnNewIssues!==false,alertOnHealthDrop:p.alertOnHealthDrop!==false,alertOnHighPriority:p.alertOnHighPriority!==false,createdAt:prev.createdAt||now,updatedAt:now,lastRunAt:prev.lastRunAt||null,lastResult:prev.lastResult||null,nextRunAt:p.enabled===false?null:new Date(Date.now()+intervals[cadence]).toISOString()};states.set(origin,m);return m}
+export function recordHostedRun(origin,result){const m=states.get(origin)||setHostedMonitor(origin,{});m.lastRunAt=new Date().toISOString();m.lastResult=result;m.updatedAt=m.lastRunAt;m.nextRunAt=m.enabled?new Date(Date.now()+(intervals[m.cadence]||intervals.daily)).toISOString():null;states.set(origin,m);return m}
