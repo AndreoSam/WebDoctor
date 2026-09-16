@@ -1,12 +1,12 @@
 {
   "name": "webdoctor-mvp",
-  "version": "3.9.1",
+  "version": "4.0.0",
   "private": true,
-  "description": "WebDoctor v3.9 - email-first monitoring notifications with advanced webhooks",
+  "description": "WebDoctor v4 - Vercel-native website health and QA scanner",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "dev": "npx vercel dev",
+    "start": "npx vercel dev"
   },
   "engines": {
     "node": ">=22"
