@@ -2,15 +2,21 @@
 (function(){
  const nativeFetch=window.fetch.bind(window);
  window.fetch=async function(input,init={}){
-  const url=typeof input==='string'?input:(input?.url||'');
+  let url=typeof input==='string'?input:(input?.url||'');
   if(url.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
    try{
     const body=JSON.parse(init.body);
     const session=typeof verificationSession!=='undefined'?verificationSession:null;
     const report=typeof lastReport!=='undefined'?lastReport:null;
     if(!body.origin){const origin=session?.origin||report?.target;if(origin)body.origin=origin;}
-    if(url==='/api/verification/check'&&session){body.origin=session.origin;body.token=session.token;}
-    init={...init,body:JSON.stringify(body)};
+    // Vercel's Node root can run Start and Check in different instances. Avoid
+    // the ephemeral verification-session lookup: status can recover the exact
+    // public WebDoctor proof directly from the target website.
+    if(url==='/api/verification/check'&&session?.origin){
+      url='/api/verification/status';
+      input=url;
+      init={...init,body:JSON.stringify({url:session.origin})};
+    }else init={...init,body:JSON.stringify(body)};
    }catch{}
   }
   const r=await nativeFetch(input,init);
