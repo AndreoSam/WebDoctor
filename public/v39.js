@@ -1,6 +1,23 @@
+// WebDoctor v3.9/v4 hosted compatibility overlay.
+// Vercel functions are stateless, so privileged hosted endpoints receive the
+// currently verified origin and validate the proof that remains on that site.
+(function(){
+ const nativeFetch=window.fetch.bind(window);
+ window.fetch=async function(input,init={}){
+  const url=typeof input==='string'?input:(input?.url||'');
+  if(url.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
+   try{const body=JSON.parse(init.body);if(!body.origin){const origin=verificationSession?.origin||lastReport?.target;if(origin)body.origin=origin;}init={...init,body:JSON.stringify(body)}}catch{}
+  }
+  const r=await nativeFetch(input,init);
+  if(url.startsWith('/api/')&&!String(r.headers.get('content-type')||'').includes('application/json')){
+   const text=await r.text().catch(()=> '');
+   return new Response(JSON.stringify({error:r.status===404?'This WebDoctor feature does not yet have a hosted API route.':(text||`API request failed with HTTP ${r.status}`)}),{status:r.status,statusText:r.statusText,headers:{'content-type':'application/json','cache-control':'no-store'}});
+  }
+  return r;
+ };
+})();
+
 // WebDoctor v3.9 — email-first external notifications overlay.
-// v3.8 attached webhook-only listeners directly to these buttons. Clone them
-// once so v3.9 owns notification save/test behavior without duplicate requests.
 (function(){
  const fmt=d=>d?new Date(d).toLocaleString():'—';
  const replaceButton=id=>{const old=$(id);if(!old)return null;const fresh=old.cloneNode(true);old.replaceWith(fresh);return fresh};
