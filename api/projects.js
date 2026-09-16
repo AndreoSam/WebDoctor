@@ -1,0 +1,1 @@
+import {json} from '../src/hostedOwnership.js';export default function handler(req,res){if(req.method!=='GET')return json(res,405,{error:'Method not allowed'});return json(res,200,{projects:[],hosted:true,notice:'Verified sites are recovered from their on-site WebDoctor proof when scanned.'})}
