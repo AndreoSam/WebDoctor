@@ -12,7 +12,7 @@ import { saveScan, history as getScanHistory, regression as getRegression } from
 import { investigateIssue, investigateReport } from './src/investigator.js';
 import { getMonitor, setMonitor, recordMonitorRun, dueMonitors } from './src/monitoringStore.js';
 import { addMonitoringEvents, listMonitoringEvents, unreadMonitoringEvents, markMonitoringEventsRead } from './src/monitoringEvents.js';
-import { getNotificationSettings, setNotificationSettings, deliverWebhook, deliverMonitoringEvents } from './src/notificationStore.js';
+import { getNotificationSettings, setNotificationSettings, deliverWebhook, deliverEmail, deliverMonitoringEvents } from './src/notificationStore.js';
 
 const ROOT = fileURLToPath(new URL('./public/', import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -95,8 +95,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && req.url === '/api/notifications/test') {
       const parsed=await readJson(req); const record=getVerification(parsed.verificationId);
       if(!record?.verified) return sendJson(res,403,{error:'Verified website ownership is required for notifications.'});
-      const result=await deliverWebhook(record.origin,{type:'test',severity:'info',state:'new',title:'WebDoctor test notification',message:'Your external notification webhook is connected.',createdAt:new Date().toISOString()},{test:true});
-      if(result.skipped) return sendJson(res,400,{error:'Enable and save a webhook first.'});
+      const channel=parsed.channel==='webhook'?'webhook':'email';
+      const event={type:'test',severity:'info',state:'new',title:'WebDoctor test notification',message:`Your ${channel} notification channel is connected.`,createdAt:new Date().toISOString()};
+      const result=channel==='webhook'?await deliverWebhook(record.origin,event,{test:true}):await deliverEmail(record.origin,event,{test:true});
+      if(result.skipped) return sendJson(res,400,{error:`Enable and save ${channel} notifications first.`});
       return sendJson(res,result.delivered?200:502,result);
     }
     if (req.method === 'POST' && req.url === '/api/monitoring/status') {
@@ -180,7 +182,7 @@ const server = http.createServer(async (req, res) => {
       if(record.verified) return sendJson(res,200,{...createVerification(record.origin),verified:true,evidence:record.verificationMethod||'Saved verification',alreadyVerified:true});
       let verified=false, evidence='';
       try{ const r=await fetch(`${record.origin}/.well-known/webdoctor-verification.txt`,{redirect:'follow',signal:AbortSignal.timeout(10000)}); const text=await r.text(); if(r.ok&&text.includes(record.token)){verified=true;evidence='HTML verification file';} }catch{}
-      if(!verified){ try{ const r=await fetch(record.origin,{redirect:'follow',signal:AbortSignal.timeout(10000)}); const html=await r.text(); const head=(html.match(/<head\b[^>]*>[\s\S]*?<\/head>/i)||[])[0]||''; const escaped=record.token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); if(new RegExp(`<meta[^>]+name=[\"']webdoctor-verification[\"'][^>]+content=[\"']${escaped}[\"']`,'i').test(head)||new RegExp(`<meta[^>]+content=[\"']${escaped}[\"'][^>]+name=[\"']webdoctor-verification[\"']`,'i').test(head)){verified=true;evidence='Meta tag';} }catch{} }
+      if(!verified){ try{ const r=await fetch(record.origin,{redirect:'follow',signal:AbortSignal.timeout(10000)}); const html=await r.text(); const head=(html.match(/<head\b[^>]*>[\s\S]*?<\/head>/i)||[])[0]||''; const escaped=record.token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); if(new RegExp(`<meta[^>]+name=["']webdoctor-verification["'][^>]+content=["']${escaped}["']`,'i').test(head)||new RegExp(`<meta[^>]+content=["']${escaped}["'][^>]+name=["']webdoctor-verification["']`,'i').test(head)){verified=true;evidence='Meta tag';} }catch{} }
       if(!verified) return sendJson(res,200,{verified:false,error:'Verification token was not found yet.'}); const saved=markVerified(record.id,evidence); return sendJson(res,200,{...saved,verified:true,evidence,origin:record.origin});
     }
 
@@ -237,7 +239,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && req.url === '/api/capacity-history') { const parsed=await readJson(req); const record=getVerification(parsed.verificationId); if(!record?.verified) return sendJson(res,403,{error:'Verified website ownership is required.'}); return sendJson(res,200,{history:await getCapacityHistory(record.origin)}); }
 
-    if (req.method === 'GET' && req.url === '/api/health') return sendJson(res, 200, { ok: true, version: '3.8.0' });
+    if (req.method === 'GET' && req.url === '/api/health') return sendJson(res, 200, { ok: true, version: '3.9.0' });
 
     const pathname = req.url === '/' ? '/index.html' : req.url.split('?')[0];
     const safePath = pathname.replace(/\.\./g, '');
