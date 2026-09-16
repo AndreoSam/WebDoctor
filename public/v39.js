@@ -1,14 +1,17 @@
-// WebDoctor v3.9/v4 hosted compatibility overlay.
-// The Vercel project is deployed as a Node server using server.js as the root
-// entrypoint, so keep the canonical /api/... routes handled by server.js.
-// Also attach the current origin to JSON requests so hosted ownership recovery
-// can validate the proof that remains on the website.
+// WebDoctor v4 hosted compatibility overlay.
 (function(){
  const nativeFetch=window.fetch.bind(window);
  window.fetch=async function(input,init={}){
   const url=typeof input==='string'?input:(input?.url||'');
   if(url.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
-   try{const body=JSON.parse(init.body);if(!body.origin){const origin=verificationSession?.origin||lastReport?.target;if(origin)body.origin=origin;}init={...init,body:JSON.stringify(body)}}catch{}
+   try{
+    const body=JSON.parse(init.body);
+    const session=typeof verificationSession!=='undefined'?verificationSession:null;
+    const report=typeof lastReport!=='undefined'?lastReport:null;
+    if(!body.origin){const origin=session?.origin||report?.target;if(origin)body.origin=origin;}
+    if(url==='/api/verification/check'&&session){body.origin=session.origin;body.token=session.token;}
+    init={...init,body:JSON.stringify(body)};
+   }catch{}
   }
   const r=await nativeFetch(input,init);
   if(url.startsWith('/api/')&&!String(r.headers.get('content-type')||'').includes('application/json')){
