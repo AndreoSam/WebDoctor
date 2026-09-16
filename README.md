@@ -1,4 +1,4 @@
-# WebDoctor v3.8
+# WebDoctor v3.9
 
 WebDoctor v2.0 turns the experimental QA engine into a persistent project workflow.
 
@@ -67,3 +67,10 @@ Website Watch now persists project-scoped monitoring events in `data/monitoring-
 
 ## v3.8 — External Notifications
 Verified projects can optionally send actionable monitoring events to a public HTTPS webhook. WebDoctor sends NEW alerts and, when enabled, RESOLVED/recovery events. Private/local destinations are blocked, delivery has a 10-second timeout, and an optional shared secret is sent in the `X-WebDoctor-Secret` header. Configuration is stored locally in `data/notification-settings.json`.
+
+## v3.9 — Email-first notifications
+- Email is now the primary monitoring notification channel.
+- Uses the website owner's SMTP account (Gmail/Outlook/custom SMTP) through Nodemailer; no WebDoctor-paid notification service is required.
+- Supports test email, recovery email, SMTP TLS/port settings, and masked stored credentials.
+- Existing HTTPS webhook delivery remains available under an Advanced disclosure.
+- NEW actionable events are delivered automatically; routine checks remain in-app only.
