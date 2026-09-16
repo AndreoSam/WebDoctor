@@ -1,0 +1,4 @@
+import crypto from 'node:crypto';import {readBody,json} from '../src/hostedOwnership.js';
+function originOf(v){let s=String(v||'').trim();if(!/^https?:\/\//i.test(s))s='https://'+s;return new URL(s).origin}
+function idFor(origin,token){return Buffer.from(JSON.stringify({origin,token})).toString('base64url')}
+export default async function handler(req,res){if(req.method!=='POST')return json(res,405,{error:'Method not allowed'});try{const p=await readBody(req),origin=originOf(p.url||p.origin),token='webdoctor-'+crypto.randomBytes(18).toString('hex');return json(res,200,{id:idFor(origin,token),origin,hostname:new URL(origin).hostname,token,verified:false,methods:{htmlFile:origin+'/.well-known/webdoctor-verification.txt',meta:`<meta name="webdoctor-verification" content="${token}">`}})}catch(e){return json(res,400,{error:e.message})}}
