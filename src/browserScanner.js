@@ -9,13 +9,27 @@ function finding(id,title,severity,detail,fix,url,evidence={},meta={}){return{id
 function relation(resource, origin){try{return new URL(resource).origin===origin?'first-party':'third-party'}catch{return'unknown'}}
 
 export async function browserAudit(target, options={}) {
-  let chromium, AxeBuilder;
-  try { ({ chromium } = await import('playwright')); ({ default: AxeBuilder } = await import('@axe-core/playwright')); }
+  let playwrightChromium, AxeBuilder;
+  try { ({ chromium: playwrightChromium } = await import('playwright')); ({ default: AxeBuilder } = await import('@axe-core/playwright')); }
   catch { return { available:false, reason:'Browser QA dependencies are missing. Run npm install, then npx playwright install chromium.' }; }
   await mkdir(SHOTS,{recursive:true});
   let browser;
-  try { browser=await chromium.launch({headless:true}); }
-  catch(error){ return {available:false,reason:`Chromium is not installed. Run npx playwright install chromium. (${error.message})`}; }
+  try {
+    if(process.env.VERCEL){
+      const { default: serverlessChromium } = await import('@sparticuz/chromium');
+      browser=await playwrightChromium.launch({
+        args:serverlessChromium.args,
+        executablePath:await serverlessChromium.executablePath(),
+        headless:true
+      });
+    }else{
+      browser=await playwrightChromium.launch({headless:true});
+    }
+  }
+  catch(error){
+    const hint=process.env.VERCEL?'Vercel serverless Chromium failed to launch.':'Chromium is not installed. Run npx playwright install chromium.';
+    return {available:false,reason:`${hint} (${error.message})`};
+  }
 
   const scanId=Date.now().toString(36), findings=[], pages=[];
   const maxPages=Math.min(Number(options.maxPages)||3,5), queue=[target], visited=new Set(), origin=new URL(target).origin;
@@ -43,7 +57,7 @@ export async function browserAudit(target, options={}) {
       try{const axe=await new AxeBuilder({page}).analyze();accessibility={violations:axe.violations,passes:axe.passes.length}}catch{}
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,userAgent:'WebDoctor-MobileQA/0.3'}),mp=await mobile.newPage(); let mobileOverflow=false,mobileShotName='';
       try{await mp.goto(url,{waitUntil:'domcontentloaded',timeout:20000});await mp.waitForTimeout(500);mobileOverflow=await mp.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+3);mobileShotName=`${scanId}-${safeName(new URL(mp.url()||url).pathname)}-mobile.png`;await mp.screenshot({path:join(SHOTS,mobileShotName),fullPage:true})}catch{} await mobile.close();
-      const p={url:facts.url||url,status:response?.status()||0,loadMs,navigationError,consoleErrors,failedRequests,httpErrors,overflow,mobileOverflow,screenshot:`/scans/${shotName}`,mobileScreenshot:mobileShotName?`/scans/${mobileShotName}`:null,accessibility}; pages.push(p);
+      const p={url:facts.url||url,status:response?.status()||0,loadMs,navigationError,consoleErrors,failedRequests,httpErrors,overflow,mobileOverflow,screenshot:process.env.VERCEL?null:`/scans/${shotName}`,mobileScreenshot:process.env.VERCEL?null:(mobileShotName?`/scans/${mobileShotName}`:null),accessibility}; pages.push(p);
       if(navigationError)findings.push(finding('browser-navigation','Browser navigation failed','high',navigationError,'Fix the page/server error so the page can load in a real browser.',url,{navigationError}));
       if(consoleErrors.length)findings.push(finding('console-errors','JavaScript console errors','medium',`${consoleErrors.length} browser console/runtime error(s) detected.`,'Inspect the console evidence and fix first-party runtime errors.',url,{consoleErrors:consoleErrors.slice(0,10)}));
       const firstPartyFailures=[...failedRequests,...httpErrors].filter(x=>x.relation==='first-party'); if(firstPartyFailures.length)findings.push(finding('first-party-request-failures','First-party browser requests failed','high',`${firstPartyFailures.length} first-party request(s) failed while rendering.`,'Fix the failing application/API/static resource requests.',url,{requests:firstPartyFailures.slice(0,12)}));
