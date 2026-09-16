@@ -1,20 +1,19 @@
 // WebDoctor v3.9/v4 hosted compatibility overlay.
-// Vercel functions are stateless, so privileged hosted endpoints receive the
-// currently verified origin and validate the proof that remains on that site.
+// The Vercel project is deployed as a Node server using server.js as the root
+// entrypoint, so keep the canonical /api/... routes handled by server.js.
+// Also attach the current origin to JSON requests so hosted ownership recovery
+// can validate the proof that remains on the website.
 (function(){
  const nativeFetch=window.fetch.bind(window);
- const routeAliases={'/api/verification/start':'/api/verification-start','/api/verification/check':'/api/verification-check','/api/verification/status':'/api/verification-status'};
  window.fetch=async function(input,init={}){
-  const originalUrl=typeof input==='string'?input:(input?.url||'');
-  const url=routeAliases[originalUrl]||originalUrl;
-  if(url!==originalUrl&&typeof input==='string')input=url;
-  if(originalUrl.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
-   try{const body=JSON.parse(init.body);if(!body.origin){const origin=verificationSession?.origin||lastReport?.target;if(origin)body.origin=origin;}if(!body.verificationToken&&verificationSession?.token)body.verificationToken=verificationSession.token;init={...init,body:JSON.stringify(body)}}catch{}
+  const url=typeof input==='string'?input:(input?.url||'');
+  if(url.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
+   try{const body=JSON.parse(init.body);if(!body.origin){const origin=verificationSession?.origin||lastReport?.target;if(origin)body.origin=origin;}init={...init,body:JSON.stringify(body)}}catch{}
   }
   const r=await nativeFetch(input,init);
-  if(originalUrl.startsWith('/api/')&&!String(r.headers.get('content-type')||'').includes('application/json')){
+  if(url.startsWith('/api/')&&!String(r.headers.get('content-type')||'').includes('application/json')){
    const text=await r.text().catch(()=> '');
-   return new Response(JSON.stringify({error:r.status===404?'This WebDoctor feature does not yet have a hosted API route.':(text||`API request failed with HTTP ${r.status}`)}),{status:r.status,statusText:r.statusText,headers:{'content-type':'application/json','cache-control':'no-store'}});
+   return new Response(JSON.stringify({error:r.status===404?'WebDoctor API route was not found on this deployment.':(text||`API request failed with HTTP ${r.status}`)}),{status:r.status,statusText:r.statusText,headers:{'content-type':'application/json','cache-control':'no-store'}});
   }
   return r;
  };
