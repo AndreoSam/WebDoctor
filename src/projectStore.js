@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const FILE=join(dirname(fileURLToPath(import.meta.url)),'..','data','scan-history.json');
+const FILE=process.env.VERCEL ? join('/tmp','webdoctor','scan-history.json') : join(dirname(fileURLToPath(import.meta.url)),'..','data','scan-history.json');
 let rows=[]; try{rows=JSON.parse(readFileSync(FILE,'utf8'));if(!Array.isArray(rows))rows=[]}catch{}
 function save(){mkdirSync(dirname(FILE),{recursive:true});writeFileSync(FILE,JSON.stringify(rows,null,2))}
 const originOf=u=>new URL(u).origin.toLowerCase();
