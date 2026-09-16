@@ -2,6 +2,7 @@
 // v3.8 attached webhook-only listeners directly to these buttons. Clone them
 // once so v3.9 owns notification save/test behavior without duplicate requests.
 (function(){
+ const fmt=d=>d?new Date(d).toLocaleString():'—';
  const replaceButton=id=>{const old=$(id);if(!old)return null;const fresh=old.cloneNode(true);old.replaceWith(fresh);return fresh};
  const saveButton=replaceButton('#save-notifications');
  const webhookTestButton=replaceButton('#test-notifications');
