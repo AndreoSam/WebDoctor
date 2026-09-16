@@ -10,7 +10,7 @@
 <body>
   <main class="shell">
     <header class="hero">
-      <div class="brand"><span class="pulse"></span> WebDoctor <small>v3.8</small></div>
+      <div class="brand"><span class="pulse"></span> WebDoctor <small>v3.9</small></div>
       <div class="hero-copy">
         <p class="eyebrow">AUTOMATED WEBSITE QA</p>
         <h1>Know what's wrong <em>before your users do.</em></h1>
@@ -93,11 +93,21 @@
       <div class="capacity-actions"><button id="save-monitoring" type="button">Save monitoring</button><button id="run-monitor-now" type="button">Run check now</button></div>
       <div id="monitoring-result"></div>
       <div class="notification-panel">
-        <div class="notification-head"><div><p class="eyebrow">EXTERNAL NOTIFICATIONS</p><h3>Webhook delivery</h3><p class="muted">Send actionable NEW and RESOLVED monitoring events to an HTTPS webhook. No paid provider or API key is required.</p></div><span id="notification-delivery-badge" class="delivery-badge">NOT CONFIGURED</span></div>
-        <div class="notification-grid"><label class="monitor-check"><input id="notify-enabled" type="checkbox"> <span><b>Webhook enabled</b><small>Only verified projects can send notifications.</small></span></label><label class="monitor-check"><input id="notify-resolved" type="checkbox" checked> <span><b>Send resolved events</b><small>Receive recovery notifications when monitored problems disappear.</small></span></label></div>
-        <label class="notification-field"><b>HTTPS webhook URL</b><input id="notify-webhook-url" type="url" placeholder="https://your-service.example/webhook"><small>Private/local network destinations are blocked.</small></label>
-        <label class="notification-field"><b>Optional shared secret</b><input id="notify-secret" type="password" placeholder="Sent as X-WebDoctor-Secret"><small>Leave blank to keep the existing secret after saving.</small></label>
-        <div class="capacity-actions"><button id="save-notifications" type="button">Save notifications</button><button id="test-notifications" type="button">Send test notification</button></div><div id="notification-status-text" class="muted"></div>
+        <div class="notification-head"><div><p class="eyebrow">EXTERNAL NOTIFICATIONS</p><h3>Email alerts</h3><p class="muted">Receive actionable NEW alerts by email, plus optional recovery messages when issues are resolved. Email uses your own SMTP account, so WebDoctor does not require a paid notification service.</p></div><span id="email-delivery-badge" class="delivery-badge">NOT CONFIGURED</span></div>
+        <div class="notification-grid"><label class="monitor-check"><input id="email-enabled" type="checkbox"> <span><b>Email enabled</b><small>Only verified projects can send monitoring email.</small></span></label><label class="monitor-check"><input id="email-resolved" type="checkbox" checked> <span><b>Send recovery email</b><small>Notify me when monitored problems disappear.</small></span></label></div>
+        <label class="notification-field"><b>Send alerts to</b><input id="notify-email" type="email" placeholder="you@example.com"></label>
+        <div class="smtp-grid"><label class="notification-field"><b>SMTP host</b><input id="smtp-host" placeholder="smtp.gmail.com"></label><label class="notification-field"><b>Port</b><input id="smtp-port" type="number" value="587" min="1" max="65535"></label></div>
+        <div class="smtp-grid"><label class="notification-field"><b>SMTP username</b><input id="smtp-user" autocomplete="username" placeholder="your-email@gmail.com"></label><label class="notification-field"><b>SMTP password / app password</b><input id="smtp-pass" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved password"></label></div>
+        <label class="notification-field"><b>From email <span class="muted">(optional)</span></b><input id="smtp-from" type="email" placeholder="Defaults to SMTP username"></label>
+        <label class="monitor-check compact-check"><input id="smtp-secure" type="checkbox"> <span><b>Use implicit TLS</b><small>Usually OFF for port 587 and ON for port 465.</small></span></label>
+        <div class="capacity-actions"><button id="save-notifications" type="button">Save notifications</button><button id="test-email" type="button">Send test email</button></div><div id="email-status-text" class="muted"></div>
+        <details class="advanced-notifications"><summary><span><b>Advanced: Webhook delivery</b><small>For developers and automation tools</small></span><i>⌄</i></summary><div class="advanced-notification-body">
+          <div class="notification-head"><div><h4>HTTPS webhook</h4><p class="muted">Send the same actionable monitoring events as JSON to an endpoint you control.</p></div><span id="notification-delivery-badge" class="delivery-badge">NOT CONFIGURED</span></div>
+          <div class="notification-grid"><label class="monitor-check"><input id="notify-enabled" type="checkbox"> <span><b>Webhook enabled</b><small>Optional advanced channel.</small></span></label><label class="monitor-check"><input id="notify-resolved" type="checkbox" checked> <span><b>Send resolved events</b><small>Include recovery events.</small></span></label></div>
+          <label class="notification-field"><b>HTTPS webhook URL</b><input id="notify-webhook-url" type="url" placeholder="https://your-service.example/webhook"><small>Private/local network destinations are blocked.</small></label>
+          <label class="notification-field"><b>Optional shared secret</b><input id="notify-secret" type="password" placeholder="Sent as X-WebDoctor-Secret"><small>Leave blank to keep the existing secret after saving.</small></label>
+          <div class="capacity-actions"><button id="test-notifications" type="button">Send test webhook</button></div><div id="notification-status-text" class="muted"></div>
+        </div></details>
       </div>
       <div class="monitor-events-head"><div><p class="eyebrow">ALERTS & EVENTS</p><h3>Monitoring timeline</h3><p class="muted">See what changed, acknowledge alerts, and jump directly to investigation or regression evidence.</p></div><div class="monitor-event-actions"><button id="refresh-monitor-events" type="button">Refresh events</button><button id="mark-monitor-read" type="button">Mark all read</button></div></div>
       <div id="monitor-event-summary" class="monitor-event-summary"></div><div class="monitor-event-filters" role="group" aria-label="Filter monitoring timeline"><button type="button" class="active" data-monitor-filter="all">All</button><button type="button" data-monitor-filter="active">Active</button><button type="button" data-monitor-filter="resolved">Resolved</button><button type="button" data-monitor-filter="checks">Checks</button></div>
