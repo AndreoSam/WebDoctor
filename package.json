@@ -1,8 +1,8 @@
 {
   "name": "webdoctor-mvp",
-  "version": "3.8.0",
+  "version": "3.9.0",
   "private": true,
-  "description": "WebDoctor v3.8 - external webhook notifications for actionable monitoring events",
+  "description": "WebDoctor v3.9 - email-first monitoring notifications with advanced webhooks",
   "type": "module",
   "scripts": {
     "dev": "node server.js",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "playwright": "^1.55.0",
-    "@axe-core/playwright": "^4.10.2"
+    "@axe-core/playwright": "^4.10.2",
+    "nodemailer": "^7.0.6"
   }
 }
