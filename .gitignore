@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+
+# WebDoctor local/persistent runtime data
+# Contains project verification state, scan/monitoring history,
+# notification settings and potentially SMTP/webhook secrets.
+data/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Playwright / test output
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / temporary files
+*.pid
+*.pid.lock
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Build / deployment output
+dist/
+build/
+.vercel/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local archives / exports
+*.zip

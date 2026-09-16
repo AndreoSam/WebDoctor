@@ -1,0 +1,18 @@
+{
+  "name": "webdoctor-mvp",
+  "version": "3.8.0",
+  "private": true,
+  "description": "WebDoctor v3.8 - external webhook notifications for actionable monitoring events",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0",
+    "@axe-core/playwright": "^4.10.2"
+  }
+}

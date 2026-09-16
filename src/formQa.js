@@ -1,0 +1,81 @@
+import { chromium } from 'playwright';
+
+const FIELD_SELECTOR='input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), textarea, select';
+const ACTION_RE=/sign\s?up|register|create account|log\s?in|sign\s?in|submit|send|continue|next|reset password|forgot password|contact|subscribe|search|get started|join|account/i;
+const NAV_RE=/sign\s?up|register|create account|log\s?in|sign\s?in|forgot|reset password|contact|get in touch|subscribe|search|get started|join|account/i;
+
+function classifyFlow({fields,actions,text,url}){
+  const hay=[text,url,...actions.map(a=>a.text),...fields.flatMap(f=>[f.name,f.id,f.placeholder,f.label,f.autocomplete])].join(' ').toLowerCase();
+  const types=new Set(fields.map(f=>f.type));
+  if(/sign\s?up|register|create account|new account/.test(hay) || (types.has('password')&&fields.filter(f=>f.type==='password').length>1)) return 'Signup';
+  if(/log\s?in|sign\s?in|current-password/.test(hay) || (types.has('password')&&types.has('email'))) return 'Login';
+  if(/forgot|reset password|recover/.test(hay)) return 'Password reset';
+  if(/contact|message|enquiry|inquiry|get in touch/.test(hay) || fields.some(f=>f.tag==='textarea')) return 'Contact';
+  if(/newsletter|subscribe/.test(hay)) return 'Newsletter';
+  if(/search/.test(hay) || types.has('search')) return 'Search';
+  return 'Interactive flow';
+}
+
+function fieldFindings(field,url,flow){
+  const out=[]; const label=field.label||field.name||field.id||field.placeholder||field.type;
+  if(field.required && field.emptyBlocked===false) out.push({severity:'medium',title:'Required field not enforced by browser validation',detail:`${label} in the ${flow} flow is marked required but did not fail the empty-value check.`,fix:'Review client-side constraints and enforce the same validation server-side.',url});
+  if(['password','text','email','tel','url'].includes(field.type) && field.maxLength<0) out.push({severity:field.type==='password'?'medium':'low',title:'No client-side maximum length',detail:`${label} in the ${flow} flow has no maxlength constraint. This is not automatically a vulnerability, but explicit limits improve resilience.`,fix:'Choose a sensible product-specific maximum and enforce it server-side too.',url});
+  if(field.type==='password'&&!field.autocomplete) out.push({severity:'low',title:'Password autocomplete guidance missing',detail:`${label} does not declare an autocomplete value.`,fix:'Use autocomplete="current-password" or "new-password" as appropriate.',url});
+  if(!field.label && !field.ariaLabel && !field.placeholder) out.push({severity:'medium',title:'Interactive field has no accessible name',detail:`A ${field.type||field.tag} field in the ${flow} flow has no associated label, aria-label or placeholder.`,fix:'Add a visible <label> (preferred) or an appropriate accessible name.',url});
+  return out;
+}
+
+export async function runFormQa(target,{maxPages=8,specificUrls=[]}={}){
+  const browser=await chromium.launch({headless:true});
+  const context=await browser.newContext({ignoreHTTPSErrors:true});
+  const page=await context.newPage();
+  const origin=new URL(target).origin; const normalize=x=>{try{const u=new URL(x,origin);u.hash='';return u.origin===origin?u.href:null}catch{return null}};
+  const queue=[target,...specificUrls.map(normalize).filter(Boolean)],seen=new Set(),forms=[],flows=[],findings=[],journeys=[],pageDiagnostics=[];
+  try{
+    while(queue.length&&seen.size<maxPages){
+      const url=queue.shift(); if(seen.has(url))continue; seen.add(url);
+      try{
+        await page.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
+        await page.waitForLoadState('networkidle',{timeout:3500}).catch(()=>{}); await page.waitForTimeout(700);
+        const discovered=await page.$$eval('a[href]',els=>els.map(a=>a.href).filter(Boolean));
+        const pageData=await page.evaluate(({fieldSelector,actionSource,navSource})=>{
+          const actionRe=new RegExp(actionSource,'i'); const navRe=new RegExp(navSource,'i');
+          const labelFor=e=>{
+            if(e.labels?.length)return [...e.labels].map(x=>x.innerText.trim()).filter(Boolean).join(' ');
+            if(e.id){const l=document.querySelector(`label[for="${CSS.escape(e.id)}"]`);if(l)return l.innerText.trim()}
+            return '';
+          };
+          const toField=(e,i)=>({index:i,tag:e.tagName.toLowerCase(),type:(e.type||e.tagName).toLowerCase(),name:e.name||'',id:e.id||'',required:!!e.required,minLength:e.minLength,maxLength:e.maxLength,pattern:e.pattern||'',autocomplete:e.autocomplete||'',placeholder:e.placeholder||'',label:labelFor(e),ariaLabel:e.getAttribute('aria-label')||'',emptyBlocked:e.required?!e.checkValidity():null});
+          const toAction=e=>({tag:e.tagName.toLowerCase(),type:(e.type||'').toLowerCase(),text:(e.innerText||e.value||e.getAttribute('aria-label')||'').trim().slice(0,120),id:e.id||'',name:e.name||''});
+          const native=[...document.forms].map((form,fi)=>({index:fi,action:form.action||location.href,method:(form.method||'get').toUpperCase(),fields:[...form.querySelectorAll(fieldSelector)].map(toField),actions:[...form.querySelectorAll('button,input[type="submit"],input[type="button"]')].map(toAction)}));
+          const allFields=[...document.querySelectorAll(fieldSelector)].map(toField);
+          const allActions=[...document.querySelectorAll('button,[role="button"],input[type="submit"],input[type="button"],a[href]')].map(toAction).filter(a=>actionRe.test(a.text));
+          const navigation=[...document.querySelectorAll('a[href],button,[role=button]')].map(toAction).filter(a=>a.text&&navRe.test(a.text)).slice(0,30); const bodyText=(document.body?.innerText||'').trim(); const loading=/loading|please wait|initializing|fetching/i.test(bodyText); const auth=/sign in|log in|unauthorized|authentication required|access denied/i.test(bodyText); const error=/404|not found|something went wrong|error occurred|failed to load/i.test(bodyText); return {native,allFields,allActions,navigation,title:document.title,text:bodyText.slice(0,5000),diagnostic:{loading,auth,error,bodyLength:bodyText.length,readyState:document.readyState}};
+        },{fieldSelector:FIELD_SELECTOR,actionSource:ACTION_RE.source,navSource:NAV_RE.source});
+
+        pageDiagnostics.push({url:page.url(),...pageData.diagnostic,fields:pageData.allFields.length,actions:pageData.allActions.length,navigation:pageData.navigation.length,status:pageData.diagnostic.error?'error-ui':pageData.diagnostic.auth?'authentication-required':pageData.diagnostic.loading?'loading-state':(pageData.allFields.length||pageData.allActions.length)?'interactive':'no-interactive-elements'});
+
+        for(const f of pageData.native){
+          const flow=classifyFlow({fields:f.fields,actions:f.actions,text:pageData.text,url:page.url()});
+          forms.push({page:page.url(),...f,flow,tests:f.fields});
+          findings.push(...f.fields.flatMap(x=>fieldFindings(x,page.url(),flow)));
+        }
+
+        // Modern React/Vue apps often have controls without a literal <form>. Group page-level controls into a discoverable flow.
+        if(pageData.allFields.length||pageData.allActions.length){
+          const flowType=classifyFlow({fields:pageData.allFields,actions:pageData.allActions,text:pageData.text,url:page.url()});
+          const signature=`${page.url()}|${flowType}|${pageData.allFields.map(f=>f.id||f.name||f.type).join(',')}`;
+          if(!flows.some(f=>f.signature===signature)){
+            const flow={signature,page:page.url(),type:flowType,title:pageData.title||flowType,fields:pageData.allFields,actions:pageData.allActions,nativeForm:pageData.native.length>0};
+            flows.push(flow);
+            if(pageData.native.length===0) findings.push({severity:'low',title:'JavaScript-controlled flow detected',detail:`WebDoctor found a ${flowType} flow with ${pageData.allFields.length} field(s) and ${pageData.allActions.length} action(s), but no native <form> element.`,fix:'This can be valid in modern apps. Ensure keyboard submission, accessibility and server-side validation are still handled.',url:page.url()});
+            findings.push(...pageData.allFields.flatMap(x=>fieldFindings(x,page.url(),flowType)));
+          }
+        }
+        for(const n of pageData.navigation||[]){const dest=normalize(n.href);journeys.push({from:page.url(),label:n.text,href:dest||n.href||'',kind:dest?'link':'action'});if(dest&&!seen.has(dest)&&queue.length<40)queue.unshift(dest)}
+        for(const href of discovered){try{const u=new URL(href);u.hash='';if(u.origin===origin&&!seen.has(u.href)&&queue.length<40)queue.push(u.href)}catch{}}
+      }catch(error){ pageDiagnostics.push({url,status:'inspection-failed',error:error?.message||String(error)}); }
+    }
+    return {available:true,pagesInspected:seen.size,formsFound:forms.length,flowsFound:flows.length,journeysFound:journeys.length,forms,flows:flows.map(({signature,...f})=>f),pageDiagnostics,journeys:[...new Map(journeys.map(j=>[`${j.from}|${j.label}|${j.href}`,j])).values()].slice(0,60),findings,mode:'smart-journey-dry-run',notice:'WebDoctor followed safe same-origin navigation links that look like login, signup, contact, search, account or recovery journeys and inspected the resulting pages. It did not submit forms, create accounts, send messages, or modify data.'};
+  }finally{await browser.close()}
+}

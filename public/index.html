@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebDoctor — Website Health Scanner</title>
+  <meta name="description" content="A zero-cost website health and QA scanner MVP." />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="brand"><span class="pulse"></span> WebDoctor <small>v3.8</small></div>
+      <div class="hero-copy">
+        <p class="eyebrow">AUTOMATED WEBSITE QA</p>
+        <h1>Know what's wrong <em>before your users do.</em></h1>
+        <p>Run a safe public-site audit plus real-browser QA for JavaScript errors, failed requests, screenshots, mobile layouts and response performance.</p>
+      </div>
+      <form id="scan-form" class="scanner">
+        <div class="urlbox"><span>https://</span><input id="url" required autocomplete="url" placeholder="yourwebsite.com" /></div>
+        <button id="scan-button" type="submit">Run website scan</button>
+      </form>
+      <p class="note">Public scans stay passive. Verify a website you control to unlock Deep QA without sending destructive or unsolicited submissions.</p>
+    </header>
+
+    <section id="projects-workspace" class="projects-workspace">
+      <div class="workspace-head"><div><p class="eyebrow">WORKSPACE</p><h2>My websites</h2><p class="muted">Verified projects stay separate, with their own scan history and QA workspace.</p></div><div class="workspace-actions"><button id="toggle-projects" type="button" aria-expanded="true">Collapse</button><button id="refresh-projects" type="button">Refresh projects</button></div></div>
+      <div id="project-list" class="project-list"><p class="muted">Loading verified projects…</p></div>
+    </section>
+
+    <nav id="project-nav" class="project-nav hidden" aria-label="Project sections">
+      <button type="button" data-tab="overview" class="active">Overview</button><button type="button" data-tab="issues">Issues</button><button type="button" data-tab="browser">Browser QA</button><button type="button" data-tab="deepqa">Deep QA</button><button type="button" data-tab="capacity">Capacity</button><button type="button" data-tab="investigator">AI Investigator</button><button type="button" data-tab="regression">Regression</button><button type="button" data-tab="monitoring" class="monitoring-nav-button">Monitoring <span id="alert-nav-badge" class="alert-nav-badge hidden">0</span></button><button type="button" data-tab="report">Health Report</button>
+    </nav>
+    <section id="project-overview-card" class="project-overview-card hidden"></section>
+    <section id="launch-dashboard" class="launch-dashboard hidden">
+      <div class="launch-head"><div><p class="eyebrow">PROJECT PULSE</p><h2>Health trend & next actions</h2></div><div class="launch-actions"><button id="quick-rescan" type="button">Run fresh scan</button><button id="print-report" type="button">Export report</button></div></div>
+      <div class="launch-grid"><article class="trend-card"><div class="trend-title"><b>Health history</b><span id="trend-caption">Saved scans</span></div><div id="health-trend" class="health-trend"><p class="muted">Run two verified scans to unlock the trend.</p></div></article><article class="next-card"><b>Recommended next action</b><div id="next-action" class="next-action">Run a scan to generate a prioritized next step.</div></article></div>
+    </section>
+
+    <section id="action-center" class="action-center hidden">
+      <div class="action-center-head"><div><p class="eyebrow">ACTION CENTER</p><h2>What needs attention now</h2><p class="muted">A live summary of changes, unresolved priority findings and the fastest next actions for this project.</p></div><button id="refresh-action-center" type="button">Refresh status</button></div>
+      <div id="action-center-content" class="action-center-content"><p class="muted">Run a verified scan to build the action center.</p></div>
+    </section>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <section id="progress" class="progress-panel hidden"><div class="progress-top"><div><p class="eyebrow">LIVE AUDIT</p><h3>Scanning website…</h3></div><b id="progress-percent">0%</b></div><div class="progress-track"><i id="progress-bar"></i></div><div id="progress-stages" class="progress-stages"></div></section>
+
+    <section id="results" class="hidden">
+      <div class="results-head">
+        <div><p class="eyebrow">SCAN REPORT</p><h2 id="target"></h2><p id="stamp" class="muted"></p></div>
+        <div id="score" class="score"></div>
+      </div>
+
+      <div id="stats" class="stats"></div>
+      <div id="categories" class="categories"></div><div id="score-breakdown" class="score-breakdown"></div>
+
+      <div class="section-title"><div><p class="eyebrow">FINDINGS</p><h2>Issues to investigate</h2></div><select id="severity"><option value="all">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+      <div id="issues" class="issues"></div>
+
+      <div id="browser-section" class="hidden">
+        <div class="section-title"><div><p class="eyebrow">BROWSER QA</p><h2>Real-browser evidence</h2><p id="browser-status" class="muted"></p></div></div>
+        <div id="browser-pages" class="browser-grid"></div>
+      </div>
+
+      <div class="section-title"><div><p class="eyebrow">DISCOVERY</p><h2>Pages scanned</h2></div></div>
+      <div class="tablewrap"><table><thead><tr><th>Page</th><th>Status</th><th>Response</th><th>Links</th><th>Images</th><th>Forms</th></tr></thead><tbody id="pages"></tbody></table></div>
+    </section>
+
+
+    <section id="verification" class="verify-panel">
+      <div><p class="eyebrow">VERIFIED WEBSITE</p><h2>Unlock Deep QA safely</h2><p class="muted">Prove control of your website before WebDoctor performs active QA. Verify once with an HTML file or meta tag. WebDoctor now remembers verified projects across restarts.</p></div>
+      <button id="verify-start" type="button">Verify website ownership</button>
+      <div id="verify-setup" class="verify-setup hidden"></div>
+      <div id="verified-badge" class="verified-badge hidden">✓ VERIFIED OWNER</div>
+    </section>
+
+    <section id="ai-investigator" class="formqa-panel hidden">
+      <div class="section-title"><div><p class="eyebrow">AI INVESTIGATOR · LOCAL</p><h2>Turn findings into fixes</h2><p class="muted">Free local diagnostic engine. It uses WebDoctor evidence to explain likely causes, impact, remediation and how to verify the fix. No API key or paid AI provider is required.</p></div><button id="investigate-top" type="button">Investigate top findings</button></div>
+      <div class="investigator-toolbar"><label><b>Finding</b><select id="investigator-issue"><option value="">Select a finding…</option></select></label><button id="investigate-one" type="button">Investigate finding</button></div>
+      <div id="investigator-results"><div class="investigator-empty"><b>Select a finding or investigate the highest-priority findings.</b><span>WebDoctor will produce a likely cause, impact, fix plan, code/config examples where useful, and retest steps.</span></div></div>
+    </section>
+
+
+    <section id="monitoring-center" class="monitoring-center hidden">
+      <div class="section-title"><div><p class="eyebrow">CONTINUOUS MONITORING</p><h2>Website Watch</h2><p class="muted">Schedule repeat health scans for this verified project. Local WebDoctor runs due checks while the server is online; deployed instances can later be kept awake by a free cron/scheduler.</p></div><button id="refresh-monitoring" type="button">Refresh status</button></div>
+      <div id="monitoring-status" class="monitor-status"><p class="muted">Open a verified project to configure monitoring.</p></div>
+      <div class="monitor-controls">
+        <label><b>Cadence</b><select id="monitor-cadence"><option value="hourly">Every hour</option><option value="daily" selected>Every day</option><option value="weekly">Every week</option></select></label>
+        <label class="monitor-check"><input id="monitor-enabled" type="checkbox" checked> <span><b>Monitoring enabled</b><small>Run checks automatically while WebDoctor is online.</small></span></label>
+      </div>
+      <div class="monitor-alerts"><label><input id="monitor-health-drop" type="checkbox" checked> Health score drops</label><label><input id="monitor-new-issues" type="checkbox" checked> New issues appear</label><label><input id="monitor-high-priority" type="checkbox" checked> High-priority issues exist</label></div>
+      <div class="capacity-actions"><button id="save-monitoring" type="button">Save monitoring</button><button id="run-monitor-now" type="button">Run check now</button></div>
+      <div id="monitoring-result"></div>
+      <div class="notification-panel">
+        <div class="notification-head"><div><p class="eyebrow">EXTERNAL NOTIFICATIONS</p><h3>Webhook delivery</h3><p class="muted">Send actionable NEW and RESOLVED monitoring events to an HTTPS webhook. No paid provider or API key is required.</p></div><span id="notification-delivery-badge" class="delivery-badge">NOT CONFIGURED</span></div>
+        <div class="notification-grid"><label class="monitor-check"><input id="notify-enabled" type="checkbox"> <span><b>Webhook enabled</b><small>Only verified projects can send notifications.</small></span></label><label class="monitor-check"><input id="notify-resolved" type="checkbox" checked> <span><b>Send resolved events</b><small>Receive recovery notifications when monitored problems disappear.</small></span></label></div>
+        <label class="notification-field"><b>HTTPS webhook URL</b><input id="notify-webhook-url" type="url" placeholder="https://your-service.example/webhook"><small>Private/local network destinations are blocked.</small></label>
+        <label class="notification-field"><b>Optional shared secret</b><input id="notify-secret" type="password" placeholder="Sent as X-WebDoctor-Secret"><small>Leave blank to keep the existing secret after saving.</small></label>
+        <div class="capacity-actions"><button id="save-notifications" type="button">Save notifications</button><button id="test-notifications" type="button">Send test notification</button></div><div id="notification-status-text" class="muted"></div>
+      </div>
+      <div class="monitor-events-head"><div><p class="eyebrow">ALERTS & EVENTS</p><h3>Monitoring timeline</h3><p class="muted">See what changed, acknowledge alerts, and jump directly to investigation or regression evidence.</p></div><div class="monitor-event-actions"><button id="refresh-monitor-events" type="button">Refresh events</button><button id="mark-monitor-read" type="button">Mark all read</button></div></div>
+      <div id="monitor-event-summary" class="monitor-event-summary"></div><div class="monitor-event-filters" role="group" aria-label="Filter monitoring timeline"><button type="button" class="active" data-monitor-filter="all">All</button><button type="button" data-monitor-filter="active">Active</button><button type="button" data-monitor-filter="resolved">Resolved</button><button type="button" data-monitor-filter="checks">Checks</button></div>
+      <div id="monitor-events" class="monitor-events"><p class="muted">Monitoring events will appear after Website Watch runs.</p></div>
+    </section>
+
+    <section id="health-report" class="health-report-panel hidden">
+      <div class="section-title"><div><p class="eyebrow">CLIENT REPORT</p><h2>Website Health Report</h2><p class="muted">A clean, non-technical summary you can review with a website owner or save as PDF.</p></div><div class="report-actions"><button id="refresh-health-report" type="button">Refresh report</button><button id="download-health-html" type="button">Download HTML</button><button id="print-health-report" type="button">Print / Save PDF</button></div></div>
+      <div id="health-report-content" class="health-report-content"><p class="muted">Run a scan to generate the report.</p></div>
+    </section>
+
+    <section id="project-intelligence" class="formqa-panel hidden">
+      <div class="section-title"><div><p class="eyebrow">PROJECT</p><h2>History & Regression</h2><p class="muted">Every completed scan is saved locally. Compare the latest two scans to prove what improved, regressed or stayed unchanged.</p></div><div class="capacity-actions"><button id="load-scan-history" type="button">Scan History</button><button id="run-regression" type="button">Compare Latest Scans</button></div></div>
+      <div id="project-intelligence-results"></div>
+    </section>
+
+    <section id="formqa" class="formqa-panel hidden">
+      <div class="section-title"><div><p class="eyebrow">DEEP QA</p><h2>Verified Form QA</h2><p class="muted">Follows safe same-origin navigation to discover login, signup, contact, recovery and other interactive journeys without submitting them.</p></div><button id="run-formqa" type="button">Discover Smart Journeys</button></div>
+      <div class="manual-journey"><label><b>Optional specific page</b><span>Use this when a login/signup page is not linked publicly.</span></label><input id="journey-url" placeholder="https://yourwebsite.com/login" /></div><div id="formqa-results"></div>
+    </section>
+
+
+    <section id="capacity-lab" class="formqa-panel hidden">
+      <div class="section-title"><div><p class="eyebrow">CAPACITY LAB</p><h2>Owner-verified capacity probe</h2><p class="muted">Controlled GET-only concurrent-user simulation with hard safety limits. No logins, forms, writes or destructive actions.</p></div></div>
+      <div class="manual-journey"><label><b>Target page</b><span>Must stay on the verified domain.</span></label><input id="capacity-url" placeholder="https://yourwebsite.com/" /></div>
+      <div class="capacity-controls">
+        <label><b>Virtual users</b><select id="capacity-users"><option>5</option><option>10</option><option>25</option><option>50</option><option>100</option></select></label>
+        <label><b>Duration</b><select id="capacity-duration"><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select></label>
+      </div>
+      <label class="sim-auth"><input id="capacity-auth" type="checkbox"> I confirm I own/control this verified website and authorize this controlled capacity probe.</label>
+      <div class="capacity-actions"><button id="run-capacity" type="button">Start Capacity Test</button><button id="run-stepped-capacity" type="button">Run Auto Stepped Test</button><button id="load-capacity-history" type="button">View History</button></div>
+      <p class="muted">Safety limits: GET only · max 50 requests/sec · max 2,000 requests · auto-stop above 30% observed errors.</p>
+      <div id="capacity-results"></div>
+      <div class="journey-load-box">
+        <p class="eyebrow">JOURNEY LOAD · v1.8</p><h3>Read-only multi-page journey</h3>
+        <p class="muted">Rotate concurrent workers through 2–5 same-domain GET pages to model browsing traffic more realistically than repeatedly hitting one URL.</p>
+        <label><b>Journey pages</b><span>One URL per line. No login, checkout, form submission or write actions.</span><textarea id="journey-capacity-urls" rows="5" placeholder="https://example.com/
+https://example.com/campaigns
+https://example.com/about"></textarea></label>
+        <div class="capacity-controls"><label><b>Workers</b><select id="journey-capacity-users"><option>5</option><option>10</option><option>25</option></select></label><label><b>Duration</b><select id="journey-capacity-duration"><option value="10">10 seconds</option><option value="30">30 seconds</option></select></label></div>
+        <div class="capacity-actions"><button id="use-discovered-journeys" type="button">Use discovered pages</button><button id="run-journey-capacity" type="button">Run Journey Load Test</button></div>
+        <div id="journey-capacity-results"></div>
+      </div>
+    </section>
+
+    <section class="roadmap" id="module-shortcuts">
+      <p class="eyebrow">PRODUCT MODULES</p>
+      <h2>Deep QA modules</h2>
+      <div class="module-grid">
+        <article class="active-module module-shortcut" role="button" tabindex="0" data-module-tab="browser"><b>Browser QA ✓</b><span>Live in v0.2: console errors, failed requests, screenshots and mobile layouts</span></article>
+        <article class="active-module module-shortcut" role="button" tabindex="0" data-module-tab="issues"><b>Accessibility ✓</b><span>Live in v0.3: axe-core WCAG findings with element evidence</span></article>
+        <article class="active-module module-shortcut" role="button" tabindex="0" data-module-tab="deepqa"><b>Verified Form QA ✓</b><span>Live in v0.9: persistent verification + navigation-aware smart journey discovery</span></article>
+        <article class="active-module module-shortcut" role="button" tabindex="0" data-module-tab="capacity"><b>Capacity Lab ✓</b><span>Live in v1.8: owner-verified probes, stepped tests, history and read-only multi-page journey load</span></article>
+        <article class="active-module module-shortcut" role="button" tabindex="0" data-module-tab="investigator"><b>AI Investigator ✓</b><span>Live in v3.2: evidence-based diagnosis, remediation and verification guidance</span></article>
+        <article class="active-module module-shortcut" role="button" tabindex="0" data-module-tab="regression"><b>Regression ✓</b><span>Live in v2.0: saved scan history and latest-vs-previous issue comparison</span></article>
+      </div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
