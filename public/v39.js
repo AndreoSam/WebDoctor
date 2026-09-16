@@ -3,13 +3,16 @@
 // currently verified origin and validate the proof that remains on that site.
 (function(){
  const nativeFetch=window.fetch.bind(window);
+ const routeAliases={'/api/verification/start':'/api/verification-start','/api/verification/check':'/api/verification-check','/api/verification/status':'/api/verification-status'};
  window.fetch=async function(input,init={}){
-  const url=typeof input==='string'?input:(input?.url||'');
-  if(url.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
-   try{const body=JSON.parse(init.body);if(!body.origin){const origin=verificationSession?.origin||lastReport?.target;if(origin)body.origin=origin;}init={...init,body:JSON.stringify(body)}}catch{}
+  const originalUrl=typeof input==='string'?input:(input?.url||'');
+  const url=routeAliases[originalUrl]||originalUrl;
+  if(url!==originalUrl&&typeof input==='string')input=url;
+  if(originalUrl.startsWith('/api/')&&typeof init.body==='string'&&(init.headers?.['content-type']||init.headers?.['Content-Type'])?.includes('application/json')){
+   try{const body=JSON.parse(init.body);if(!body.origin){const origin=verificationSession?.origin||lastReport?.target;if(origin)body.origin=origin;}if(!body.verificationToken&&verificationSession?.token)body.verificationToken=verificationSession.token;init={...init,body:JSON.stringify(body)}}catch{}
   }
   const r=await nativeFetch(input,init);
-  if(url.startsWith('/api/')&&!String(r.headers.get('content-type')||'').includes('application/json')){
+  if(originalUrl.startsWith('/api/')&&!String(r.headers.get('content-type')||'').includes('application/json')){
    const text=await r.text().catch(()=> '');
    return new Response(JSON.stringify({error:r.status===404?'This WebDoctor feature does not yet have a hosted API route.':(text||`API request failed with HTTP ${r.status}`)}),{status:r.status,statusText:r.statusText,headers:{'content-type':'application/json','cache-control':'no-store'}});
   }
