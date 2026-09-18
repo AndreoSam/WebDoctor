@@ -1,6 +1,7 @@
 import { scanWebsite } from '../src/scanner.js';
 import { browserAudit } from '../src/browserScanner.js';
-import { saveHostedScan } from '../src/hostedHistory.js';\nimport {saveScan,durableStoreEnabled} from '../src/supabaseStore.js';
+import { saveHostedScan } from '../src/hostedHistory.js';
+import {saveScan,durableStoreEnabled} from '../src/supabaseStore.js';
 function sendJson(res,status,data){res.statusCode=status;res.setHeader('content-type','application/json; charset=utf-8');res.setHeader('cache-control','no-store');res.end(JSON.stringify(data))}
 function isPrivateHostname(h){h=h.toLowerCase();return h==='localhost'||h==='127.0.0.1'||h==='::1'||h.endsWith('.local')||/^10\./.test(h)||/^192\.168\./.test(h)||/^169\.254\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)}
 async function bodyOf(req){if(req.body&&typeof req.body==='object')return req.body;if(typeof req.body==='string')return JSON.parse(req.body||'{}');let s='';for await(const c of req)s+=c;return JSON.parse(s||'{}')}
