@@ -15,7 +15,7 @@ npm install
 npx playwright install chromium
 npm start
 ```
-Open http://localhost:3000
+Open https://web-doctor-eta.vercel.app
 
 For regression, run the same verified website scan at least twice, then click **Compare Latest Scans**.
 
